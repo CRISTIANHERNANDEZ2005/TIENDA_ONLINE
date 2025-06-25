@@ -3853,19 +3853,30 @@ def reportes_inventario():
 
 # Añadir estas funciones de ayuda al inicio de app.py
 def generar_pdf(html):
-    config = pdfkit.configuration(wkhtmltopdf=r'C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe')
-    options = {
-        'encoding': 'UTF-8',
-        'quiet': '',
-        'enable-local-file-access': '',
-        'margin-top': '10mm',
-        'margin-right': '10mm',
-        'margin-bottom': '10mm',
-        'margin-left': '10mm',
-        'page-size': 'A4',
-        'orientation': 'Portrait'
-    }
-    return pdfkit.from_string(html, False, configuration=config, options=options)
+    try:
+        # Intenta detectar automáticamente la ubicación de wkhtmltopdf
+        try:
+            import wkhtmltopdf
+            config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf.find_wkhtmltopdf())
+        except:
+            # Fallback para Render.com
+            config = pdfkit.configuration(wkhtmltopdf='/usr/bin/wkhtmltopdf')
+        
+        options = {
+            'encoding': 'UTF-8',
+            'quiet': '',
+            'enable-local-file-access': '',
+            'margin-top': '10mm',
+            'margin-right': '10mm',
+            'margin-bottom': '10mm',
+            'margin-left': '10mm',
+            'page-size': 'A4',
+            'orientation': 'Portrait'
+        }
+        return pdfkit.from_string(html, False, configuration=config, options=options)
+    except Exception as e:
+        app.logger.error(f'Error al generar PDF: {str(e)}')
+        raise
 
 def image_to_base64(image_path):
     with open(image_path, "rb") as image_file:
