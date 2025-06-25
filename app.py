@@ -3609,84 +3609,6 @@ def agregar_compra():
                           proveedores=proveedores)
 
 
-@app.route('/admin/inventario/generar_pdf')
-@admin_required
-def generar_reporte_inventario_pdf():
-    try:
-        # Obtener todos los productos activos
-        productos = Producto.query.filter_by(activo=True).all()
-        
-        # Calcular estadísticas
-        total_productos = len(productos)
-        valor_total_base = sum(p.precio * p.stock for p in productos)
-        valor_total_final = sum(p.precio_final * p.stock for p in productos)
-        descuento_total = valor_total_base - valor_total_final
-        
-        productos_bajo_stock = len([p for p in productos if p.stock < p.stock_minimo])
-        productos_sobre_stock = len([p for p in productos if p.stock > p.stock_maximo])
-        
-        # Preparar datos para gráficos
-        categorias_stock = {}
-        for p in productos:
-            cat_nombre = p.categoria.nombre
-            if cat_nombre not in categorias_stock:
-                categorias_stock[cat_nombre] = {"stock": 0, "valor_base": 0, "valor_final": 0}
-            
-            categorias_stock[cat_nombre]["stock"] += p.stock
-            categorias_stock[cat_nombre]["valor_base"] += p.precio * p.stock
-            categorias_stock[cat_nombre]["valor_final"] += p.precio_final * p.stock
-        
-        # Calcular el porcentaje de descuento promedio
-        descuento_promedio = 0
-        productos_con_descuento = [p for p in productos if p.descuento > 0]
-        if productos_con_descuento:
-            descuento_promedio = sum(p.descuento for p in productos_con_descuento) / len(productos_con_descuento)
-        
-        # Renderizar el template HTML
-        fecha = datetime.now(timezone.utc).strftime("%d/%m/%Y")
-        html = render_template('admin/reporte_inventario_pdf.html', 
-                             fecha=fecha,
-                             productos=productos,
-                             total_productos=total_productos,
-                             valor_total_base=valor_total_base,
-                             valor_total_final=valor_total_final,
-                             descuento_total=descuento_total,
-                             productos_bajo_stock=productos_bajo_stock,
-                             productos_sobre_stock=productos_sobre_stock,
-                             categorias_stock=categorias_stock,
-                             descuento_promedio=descuento_promedio)
-        
-        # Configuración de pdfkit
-        config = pdfkit.configuration(wkhtmltopdf=r'C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe')
-        options = {
-            'encoding': 'UTF-8',
-            'quiet': '',
-            'enable-local-file-access': '',
-            'margin-top': '10mm',
-            'margin-right': '10mm',
-            'margin-bottom': '10mm',
-            'margin-left': '10mm',
-            'page-size': 'A4',
-            'orientation': 'Portrait'
-        }
-        
-        # Generar PDF
-        pdf = pdfkit.from_string(html, False, configuration=config, options=options)
-        
-        # Crear respuesta
-        response = make_response(pdf)
-        response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Content-Disposition'] = f'attachment; filename=reporte_inventario_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.pdf'
-        
-        return response
-        
-    except Exception as e:
-        app.logger.error(f'Error al generar PDF: {str(e)}')
-        flash(f'Error al generar el reporte PDF: {str(e)}', 'danger')
-        return redirect(url_for('reportes_inventario'))
-
-
-
 @app.route('/admin/inventario/generar_excel')
 @admin_required
 def generar_reporte_inventario_excel():
@@ -4062,6 +3984,67 @@ def descargar_categorias_pdf():
     response.headers['Content-Type'] = 'application/pdf'
     response.headers['Content-Disposition'] = 'attachment; filename=reporte_categorias.pdf'
     return response
+
+@app.route('/admin/inventario/generar_pdf')
+@admin_required
+def generar_reporte_inventario_pdf():
+    try:
+        # Obtener todos los productos activos
+        productos = Producto.query.filter_by(activo=True).all()
+        
+        # Calcular estadísticas
+        total_productos = len(productos)
+        valor_total_base = sum(p.precio * p.stock for p in productos)
+        valor_total_final = sum(p.precio_final * p.stock for p in productos)
+        descuento_total = valor_total_base - valor_total_final
+        
+        productos_bajo_stock = len([p for p in productos if p.stock < p.stock_minimo])
+        productos_sobre_stock = len([p for p in productos if p.stock > p.stock_maximo])
+        
+        # Preparar datos para gráficos
+        categorias_stock = {}
+        for p in productos:
+            cat_nombre = p.categoria.nombre
+            if cat_nombre not in categorias_stock:
+                categorias_stock[cat_nombre] = {"stock": 0, "valor_base": 0, "valor_final": 0}
+            
+            categorias_stock[cat_nombre]["stock"] += p.stock
+            categorias_stock[cat_nombre]["valor_base"] += p.precio * p.stock
+            categorias_stock[cat_nombre]["valor_final"] += p.precio_final * p.stock
+        
+        # Calcular el porcentaje de descuento promedio
+        descuento_promedio = 0
+        productos_con_descuento = [p for p in productos if p.descuento > 0]
+        if productos_con_descuento:
+            descuento_promedio = sum(p.descuento for p in productos_con_descuento) / len(productos_con_descuento)
+        
+        # Renderizar el template HTML
+        fecha = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+        html = render_template('admin/reporte_inventario_pdf.html', 
+                             fecha=fecha,
+                             productos=productos,
+                             total_productos=total_productos,
+                             valor_total_base=valor_total_base,
+                             valor_total_final=valor_total_final,
+                             descuento_total=descuento_total,
+                             productos_bajo_stock=productos_bajo_stock,
+                             productos_sobre_stock=productos_sobre_stock,
+                             categorias_stock=categorias_stock,
+                             descuento_promedio=descuento_promedio)
+        
+        pdf = generar_pdf(html)
+        # Crear respuesta
+        response = make_response(pdf)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename=reporte_inventario_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.pdf'
+        
+        return response
+        
+    except Exception as e:
+        app.logger.error(f'Error al generar PDF: {str(e)}')
+        flash(f'Error al generar el reporte PDF: {str(e)}', 'danger')
+        return redirect(url_for('reportes_inventario'))
+
 
 
 @app.route('/admin/descargas/productos_excel')
