@@ -30,6 +30,8 @@ from flask import g
 from zoneinfo import ZoneInfo
 import random
 from functools import wraps
+from xhtml2pdf import pisa
+from io import BytesIO
 
 logging.basicConfig(level=logging.INFO)
 
@@ -3853,8 +3855,12 @@ def reportes_inventario():
                            descuento_promedio=descuento_promedio)
 
 
+
+
 def generar_pdf(html):
-    return HTML(string=html).write_pdf()
+    result = BytesIO()
+    pisa.CreatePDF(BytesIO(html.encode('utf-8')), result)
+    return result.getvalue()
 
 def image_to_base64(image_path):
     with open(image_path, "rb") as image_file:
